@@ -484,6 +484,8 @@
             <button class="tab-btn active" id="tab0" onclick="switchMap(0)">MAP 1 (HÌNH THOI)</button>
             <button class="tab-btn" id="tab1" onclick="switchMap(1)">MAP 2 (PHẢI - DIODE)</button>
             <button class="tab-btn" id="tab2" onclick="switchMap(2)">MAP 3 (TRÁI - DIODE)</button>
+            <button class="tab-btn" id="tab3" onclick="switchMap(3)">MAP 4</button>
+            <button class="tab-btn" id="tab4" onclick="switchMap(4)">MAP 5</button>
         </div>
 
         <div style="overflow-x: auto;">
@@ -506,6 +508,7 @@
         <div style="display: flex; gap: 6px; margin-top: 10px;">
             <button class="btn-sub primary" style="flex: 1;" onclick="addManualRow()">➕ THÊM MỐC</button>
             <button class="btn-sub success" style="flex: 1;" onclick="saveMapToCar()">💾 LƯU VÀO XE</button>
+            <button class="btn-sub" style="flex: 1; background: #6366f1; color: white;" onclick="resetMapToDefault()">🔄 MẶC ĐỊNH CODE</button>
             <button class="btn-sub danger" onclick="clearAllWps()">🗑️</button>
         </div>
     </div>
@@ -647,7 +650,39 @@
             { ticks: 11000, speed: 200, action: 0 }
         ];
 
-        let userMaps = [defaultMap1, defaultMap2, defaultMap3];
+        const defaultMap4 = [
+            { ticks: 0,     speed: 120, action: 0 },
+            { ticks: 252,   speed: 120, action: 2 },
+            { ticks: 257,   speed: 140, action: 2 },
+            { ticks: 282,   speed: 140, action: 2 },
+            { ticks: 818,   speed: 140, action: 1 },
+            { ticks: 855,   speed: 140, action: 1 },
+            { ticks: 857,   speed: 140, action: 1 },
+            { ticks: 1746,  speed: 100, action: 0 },
+            { ticks: 3000,  speed: 130, action: 0 },
+            { ticks: 8076,  speed: 150, action: 0 },
+            { ticks: 11501, speed: 110, action: 0 },
+            { ticks: 12000, speed: 180, action: 0 },
+            { ticks: 13300, speed: 110, action: 0 },
+            { ticks: 14500, speed: 150, action: 0 },
+            { ticks: 15000, speed: 225, action: 0 }
+        ];
+        const defaultMap5 = [
+            { ticks: 0,     speed: 120, action: 0 },
+            { ticks: 252,   speed: 120, action: 1 },
+            { ticks: 257,   speed: 120, action: 1 },
+            { ticks: 282,   speed: 120, action: 1 },
+            { ticks: 818,   speed: 120, action: 2 },
+            { ticks: 855,   speed: 120, action: 2 },
+            { ticks: 857,   speed: 120, action: 2 },
+            { ticks: 1746,  speed: 120, action: 0 },
+            { ticks: 7500,  speed: 150, action: 0 },
+            { ticks: 10912, speed: 120, action: 0 },
+            { ticks: 11707, speed: 160, action: 0 },
+            { ticks: 15057, speed: 225, action: 0 }
+        ];
+
+        let userMaps = [defaultMap1, defaultMap2, defaultMap3, defaultMap4, defaultMap5];
         try {
             const saved = localStorage.getItem('racecar_user_maps_v2');
             if (saved) {
@@ -656,6 +691,8 @@
                     if (!parsed[0] || parsed[0].length === 0) parsed[0] = defaultMap1;
                     parsed[1] = defaultMap2; // Cập nhật đúng 13 mốc thực tế cho Map 2 (Phải - Diode)
                     parsed[2] = defaultMap3; // Cập nhật đúng 13 mốc thực tế cho Map 3 (Trái - Diode)
+                    parsed[3] = defaultMap4; // Cập nhật đúng 15 mốc thực tế cho Map 4
+                    parsed[4] = defaultMap5; // Cập nhật đúng 12 mốc thực tế cho Map 5
                     userMaps = parsed;
                 }
             }
@@ -664,6 +701,8 @@
         }
         userMaps[1] = defaultMap2;
         userMaps[2] = defaultMap3;
+        userMaps[3] = defaultMap4;
+        userMaps[4] = defaultMap5;
         saveLocalMaps();
 
         function saveLocalMaps() {
@@ -844,10 +883,16 @@
                     const m = parseInt(parts[0]);
                     const count = parseInt(parts[1]);
                     const right = parts.length >= 3 ? parseInt(parts[2]) : 0;
-                    if (m >= 0 && m < 3) {
-                        userMaps[m] = [];
-                        if (count === 0) {
-                            renderWpTable();
+                    if (m >= 0 && m < 5) {
+                        if (((m === 1 || m === 2) && count < 13) || (m === 3 && count < 15) || (m === 4 && count < 12)) {
+                            window[`skipWpSync_${m}`] = true;
+                            log(`⚠️ Xe đang lưu ${count} mốc cũ. Giữ nguyên mốc chuẩn CODE! Bấm "💾 LƯU VÀO XE" để cập nhật.`);
+                        } else {
+                            window[`skipWpSync_${m}`] = false;
+                            userMaps[m] = [];
+                            if (count === 0) {
+                                renderWpTable();
+                            }
                         }
                     }
                     if (right === 1) {
@@ -866,7 +911,10 @@
                     const ticks = parseInt(p[2]);
                     const spd = parseInt(p[3]);
                     const act = parseInt(p[4]);
-                    if (m >= 0 && m < 3) {
+                    if (m >= 0 && m < 5) {
+                        if (window[`skipWpSync_${m}`]) {
+                            return; // Không ghi đè nếu xe gửi mốc cũ
+                        }
                         // Thêm vào danh sách và cập nhật UI
                         userMaps[m].push({ ticks: ticks, speed: spd, action: act });
                         userMaps[m].sort((a, b) => a.ticks - b.ticks);
@@ -1098,6 +1146,8 @@
             if (idx === 0) return 'Map 1 (Hình Thoi)';
             if (idx === 1) return 'Map 2 (Phải - Diode)';
             if (idx === 2) return 'Map 3 (Trái - Diode)';
+            if (idx === 3) return 'Map 4 (Dự Phòng 1)';
+            if (idx === 4) return 'Map 5 (Dự Phòng 2)';
             return 'Map ' + (idx + 1);
         }
 
@@ -1126,6 +1176,22 @@
             await sendCmd('CMD:SAVE');
             log(`✅ Đã lưu vĩnh viễn ${getMapTitle(activeMap)} (${list.length} mốc) vào Flash NVS!`);
             alert(`✅ Đã nạp thành công ${list.length} mốc [${getMapTitle(activeMap)}] vào xe! Giờ bạn có thể đặt xe lên vạch và bấm LƯỢT 2.`);
+        }
+
+        function resetMapToDefault() {
+            let targetMap = null;
+            if (activeMap === 0) targetMap = defaultMap1;
+            else if (activeMap === 1) targetMap = defaultMap2;
+            else if (activeMap === 2) targetMap = defaultMap3;
+            else if (activeMap === 3) targetMap = defaultMap4;
+            else if (activeMap === 4) targetMap = defaultMap5;
+
+            if (!targetMap) return;
+            userMaps[activeMap] = JSON.parse(JSON.stringify(targetMap));
+            saveLocalMaps();
+            renderWpTable();
+            log(`🔄 Đã khôi phục ${userMaps[activeMap].length} mốc ${getMapTitle(activeMap)} chuẩn theo CODE!`);
+            alert(`✅ Đã nạp lại ${userMaps[activeMap].length} mốc [${getMapTitle(activeMap)}] giống trong CODE!\n\nHãy nhấn "💾 LƯU VÀO XE" để lưu vào Flash ESP32.`);
         }
 
         renderWpTable();

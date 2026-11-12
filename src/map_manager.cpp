@@ -55,6 +55,39 @@ void map_load_defaults(void) {
     s_maps[2].wps[10] = { .start_ticks = 7000,  .target_speed = 120, .action = ACTION_NORMAL };
     s_maps[2].wps[11] = { .start_ticks = 7852,  .target_speed = 140, .action = ACTION_NORMAL };
     s_maps[2].wps[12] = { .start_ticks = 11000, .target_speed = 200, .action = ACTION_NORMAL };
+
+    // 4. MAP 4 (15 mốc người dùng đã tune thực tế)
+    s_maps[3].count = 15;
+    s_maps[3].wps[0]  = { .start_ticks = 0,     .target_speed = 120, .action = ACTION_NORMAL };
+    s_maps[3].wps[1]  = { .start_ticks = 252,   .target_speed = 120, .action = ACTION_FORCE_RIGHT };
+    s_maps[3].wps[2]  = { .start_ticks = 257,   .target_speed = 140, .action = ACTION_FORCE_RIGHT };
+    s_maps[3].wps[3]  = { .start_ticks = 282,   .target_speed = 140, .action = ACTION_FORCE_RIGHT };
+    s_maps[3].wps[4]  = { .start_ticks = 818,   .target_speed = 140, .action = ACTION_FORCE_LEFT };
+    s_maps[3].wps[5]  = { .start_ticks = 855,   .target_speed = 140, .action = ACTION_FORCE_LEFT };
+    s_maps[3].wps[6]  = { .start_ticks = 857,   .target_speed = 140, .action = ACTION_FORCE_LEFT };
+    s_maps[3].wps[7]  = { .start_ticks = 1746,  .target_speed = 100, .action = ACTION_NORMAL };
+    s_maps[3].wps[8]  = { .start_ticks = 3000,  .target_speed = 130, .action = ACTION_NORMAL };
+    s_maps[3].wps[9]  = { .start_ticks = 8076,  .target_speed = 150, .action = ACTION_NORMAL };
+    s_maps[3].wps[10] = { .start_ticks = 11501, .target_speed = 110, .action = ACTION_NORMAL };
+    s_maps[3].wps[11] = { .start_ticks = 12000, .target_speed = 180, .action = ACTION_NORMAL };
+    s_maps[3].wps[12] = { .start_ticks = 13300, .target_speed = 110, .action = ACTION_NORMAL };
+    s_maps[3].wps[13] = { .start_ticks = 14500, .target_speed = 150, .action = ACTION_NORMAL };
+    s_maps[3].wps[14] = { .start_ticks = 15000, .target_speed = 225, .action = ACTION_NORMAL };
+
+    // 5. MAP 5 (12 mốc người dùng đã tune thực tế)
+    s_maps[4].count = 12;
+    s_maps[4].wps[0]  = { .start_ticks = 0,     .target_speed = 120, .action = ACTION_NORMAL };
+    s_maps[4].wps[1]  = { .start_ticks = 252,   .target_speed = 120, .action = ACTION_FORCE_LEFT };
+    s_maps[4].wps[2]  = { .start_ticks = 257,   .target_speed = 120, .action = ACTION_FORCE_LEFT };
+    s_maps[4].wps[3]  = { .start_ticks = 282,   .target_speed = 120, .action = ACTION_FORCE_LEFT };
+    s_maps[4].wps[4]  = { .start_ticks = 818,   .target_speed = 120, .action = ACTION_FORCE_RIGHT };
+    s_maps[4].wps[5]  = { .start_ticks = 855,   .target_speed = 120, .action = ACTION_FORCE_RIGHT };
+    s_maps[4].wps[6]  = { .start_ticks = 857,   .target_speed = 120, .action = ACTION_FORCE_RIGHT };
+    s_maps[4].wps[7]  = { .start_ticks = 1746,  .target_speed = 120, .action = ACTION_NORMAL };
+    s_maps[4].wps[8]  = { .start_ticks = 7500,  .target_speed = 150, .action = ACTION_NORMAL };
+    s_maps[4].wps[9]  = { .start_ticks = 10912, .target_speed = 120, .action = ACTION_NORMAL };
+    s_maps[4].wps[10] = { .start_ticks = 11707, .target_speed = 160, .action = ACTION_NORMAL };
+    s_maps[4].wps[11] = { .start_ticks = 15057, .target_speed = 225, .action = ACTION_NORMAL };
 }
 
 void map_manager_init(void) {
@@ -62,8 +95,8 @@ void map_manager_init(void) {
         map_load_defaults();
         map_save_to_flash();
     } else {
-        // Nếu Flash chưa có mốc nào hoặc Map 2, Map 3 chưa cập nhật đủ 13 mốc -> Nạp mới và lưu
-        if (s_maps[0].count == 0 || s_maps[1].count < 13 || s_maps[2].count < 13) {
+        // Nếu Flash chưa có mốc nào hoặc Map 2 (< 13), Map 3 (< 13), Map 4 (< 15), Map 5 (< 12) -> Nạp mới và lưu
+        if (s_maps[0].count == 0 || s_maps[1].count < 13 || s_maps[2].count < 13 || s_maps[3].count < 15 || s_maps[4].count < 12) {
             map_load_defaults();
             map_save_to_flash();
         } else {
@@ -107,8 +140,45 @@ bool map_load_from_flash(void) {
         prefs.end();
         return false;
     }
-    size_t len = prefs.getBytes("map_data", (void*)s_maps, sizeof(s_maps));
-    if (len != sizeof(s_maps)) {
+    size_t len = prefs.getBytesLength("map_data");
+    if (len == sizeof(s_maps)) {
+        prefs.getBytes("map_data", (void*)s_maps, sizeof(s_maps));
+    } else if (len == 3 * sizeof(MapProfile_t)) {
+        // Tương thích ngược: Đọc 3 map đã tune từ Flash, nạp mặc định cho Map 4 & 5
+        prefs.getBytes("map_data", (void*)s_maps, 3 * sizeof(MapProfile_t));
+        // Map 4 (15 mốc)
+        s_maps[3].count = 15;
+        s_maps[3].wps[0]  = { .start_ticks = 0,     .target_speed = 120, .action = ACTION_NORMAL };
+        s_maps[3].wps[1]  = { .start_ticks = 252,   .target_speed = 120, .action = ACTION_FORCE_RIGHT };
+        s_maps[3].wps[2]  = { .start_ticks = 257,   .target_speed = 140, .action = ACTION_FORCE_RIGHT };
+        s_maps[3].wps[3]  = { .start_ticks = 282,   .target_speed = 140, .action = ACTION_FORCE_RIGHT };
+        s_maps[3].wps[4]  = { .start_ticks = 818,   .target_speed = 140, .action = ACTION_FORCE_LEFT };
+        s_maps[3].wps[5]  = { .start_ticks = 855,   .target_speed = 140, .action = ACTION_FORCE_LEFT };
+        s_maps[3].wps[6]  = { .start_ticks = 857,   .target_speed = 140, .action = ACTION_FORCE_LEFT };
+        s_maps[3].wps[7]  = { .start_ticks = 1746,  .target_speed = 100, .action = ACTION_NORMAL };
+        s_maps[3].wps[8]  = { .start_ticks = 3000,  .target_speed = 130, .action = ACTION_NORMAL };
+        s_maps[3].wps[9]  = { .start_ticks = 8076,  .target_speed = 150, .action = ACTION_NORMAL };
+        s_maps[3].wps[10] = { .start_ticks = 11501, .target_speed = 110, .action = ACTION_NORMAL };
+        s_maps[3].wps[11] = { .start_ticks = 12000, .target_speed = 180, .action = ACTION_NORMAL };
+        s_maps[3].wps[12] = { .start_ticks = 13300, .target_speed = 110, .action = ACTION_NORMAL };
+        s_maps[3].wps[13] = { .start_ticks = 14500, .target_speed = 150, .action = ACTION_NORMAL };
+        s_maps[3].wps[14] = { .start_ticks = 15000, .target_speed = 225, .action = ACTION_NORMAL };
+
+        // Map 5 (12 mốc)
+        s_maps[4].count = 12;
+        s_maps[4].wps[0]  = { .start_ticks = 0,     .target_speed = 120, .action = ACTION_NORMAL };
+        s_maps[4].wps[1]  = { .start_ticks = 252,   .target_speed = 120, .action = ACTION_FORCE_LEFT };
+        s_maps[4].wps[2]  = { .start_ticks = 257,   .target_speed = 120, .action = ACTION_FORCE_LEFT };
+        s_maps[4].wps[3]  = { .start_ticks = 282,   .target_speed = 120, .action = ACTION_FORCE_LEFT };
+        s_maps[4].wps[4]  = { .start_ticks = 818,   .target_speed = 120, .action = ACTION_FORCE_RIGHT };
+        s_maps[4].wps[5]  = { .start_ticks = 855,   .target_speed = 120, .action = ACTION_FORCE_RIGHT };
+        s_maps[4].wps[6]  = { .start_ticks = 857,   .target_speed = 120, .action = ACTION_FORCE_RIGHT };
+        s_maps[4].wps[7]  = { .start_ticks = 1746,  .target_speed = 120, .action = ACTION_NORMAL };
+        s_maps[4].wps[8]  = { .start_ticks = 7500,  .target_speed = 150, .action = ACTION_NORMAL };
+        s_maps[4].wps[9]  = { .start_ticks = 10912, .target_speed = 120, .action = ACTION_NORMAL };
+        s_maps[4].wps[10] = { .start_ticks = 11707, .target_speed = 160, .action = ACTION_NORMAL };
+        s_maps[4].wps[11] = { .start_ticks = 15057, .target_speed = 225, .action = ACTION_NORMAL };
+    } else {
         prefs.end();
         return false;
     }

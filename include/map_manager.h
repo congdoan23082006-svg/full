@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#define NUM_MAPS          3
+#define NUM_MAPS          5
 #define MAX_WAYPOINTS     16
 
 // Các hành vi cưỡng bức tại từng mốc sa bàn
